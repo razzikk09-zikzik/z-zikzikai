@@ -5,6 +5,7 @@ import TopBar from './components/TopBar'
 import Dashboard from './components/Dashboard'
 import ChatScreen from './components/ChatScreen'
 import CalendarScreen from './components/CalendarScreen'
+import TasksScreen from './components/TasksScreen'
 import VoiceMode from './components/VoiceMode'
 import { navItems } from './data'
 import { navIcons } from './components/Sidebar'
@@ -38,11 +39,12 @@ export default function App() {
       <div className="flex min-w-0 flex-1 flex-col pb-14 lg:pb-0">
         <TopBar search={search} onSearch={setSearch} />
         <main className="min-h-0 flex-1">
-          <div className={`h-full ${nav === 'Chat' || nav === 'Calendar' ? 'hidden' : 'block'}`}>
+          <div className={`h-full ${nav === 'Chat' || nav === 'Calendar' || nav === 'Tasks' ? 'hidden' : 'block'}`}>
             <Dashboard onMic={() => setVoice(true)} />
           </div>
           {nav === 'Chat' && <ChatScreen onMic={() => setVoice(true)} />}
           {nav === 'Calendar' && <CalendarScreen />}
+          {nav === 'Tasks' && <TasksScreen onNavigate={setNav} />}
         </main>
       </div>
 
