@@ -4,7 +4,10 @@ import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Dashboard from './components/Dashboard'
 import ChatScreen from './components/ChatScreen'
+import CalendarScreen from './components/CalendarScreen'
 import VoiceMode from './components/VoiceMode'
+import { navItems } from './data'
+import { navIcons } from './components/Sidebar'
 
 export default function App() {
   const [nav, setNav] = useState('Home')
@@ -23,18 +26,45 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const mobileNav = navItems.filter((n) =>
+    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes'].includes(n.label),
+  )
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F4F4FB]">
-      <Sidebar active={nav} onSelect={setNav} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="hidden h-full lg:flex">
+        <Sidebar active={nav} onSelect={setNav} />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col pb-14 lg:pb-0">
         <TopBar search={search} onSearch={setSearch} />
         <main className="min-h-0 flex-1">
-          <div className={`h-full ${nav === 'Chat' ? 'hidden' : 'block'}`}>
+          <div className={`h-full ${nav === 'Chat' || nav === 'Calendar' ? 'hidden' : 'block'}`}>
             <Dashboard onMic={() => setVoice(true)} />
           </div>
           {nav === 'Chat' && <ChatScreen onMic={() => setVoice(true)} />}
+          {nav === 'Calendar' && <CalendarScreen />}
         </main>
       </div>
+
+      {/* mobile bottom navigation */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-14 items-stretch justify-around border-t border-[#ECECF4] bg-white/95 backdrop-blur lg:hidden">
+        {mobileNav.map((item) => {
+          const Icon = navIcons[item.icon]
+          const isActive = nav === item.label
+          return (
+            <button
+              key={item.label}
+              onClick={() => setNav(item.label)}
+              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
+                isActive ? 'text-[#5B4DFF]' : 'text-[#9CA3AF]'
+              }`}
+            >
+              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.9} />
+              {item.label}
+            </button>
+          )
+        })}
+      </nav>
 
       <AnimatePresence>{voice && <VoiceMode onClose={() => setVoice(false)} />}</AnimatePresence>
     </div>
