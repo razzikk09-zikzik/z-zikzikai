@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Dashboard from './components/Dashboard'
+import ChatScreen from './components/ChatScreen'
 import VoiceMode from './components/VoiceMode'
 
 export default function App() {
@@ -28,7 +29,10 @@ export default function App() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar search={search} onSearch={setSearch} />
         <main className="min-h-0 flex-1">
-          <Dashboard onMic={() => setVoice(true)} />
+          <div className={`h-full ${nav === 'Chat' ? 'hidden' : 'block'}`}>
+            <Dashboard onMic={() => setVoice(true)} />
+          </div>
+          {nav === 'Chat' && <ChatScreen onMic={() => setVoice(true)} />}
         </main>
       </div>
 
