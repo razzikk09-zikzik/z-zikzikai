@@ -7,6 +7,7 @@ import ChatScreen from './components/ChatScreen'
 import CalendarScreen from './components/CalendarScreen'
 import TasksScreen from './components/TasksScreen'
 import NotesScreen from './components/NotesScreen'
+import DocumentsScreen from './components/DocumentsScreen'
 import VoiceMode from './components/VoiceMode'
 import { navItems } from './data'
 import { navIcons } from './components/Sidebar'
@@ -29,7 +30,7 @@ export default function App() {
   }, [])
 
   const mobileNav = navItems.filter((n) =>
-    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes'].includes(n.label),
+    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes', 'Documents'].includes(n.label),
   )
 
   return (
@@ -42,7 +43,9 @@ export default function App() {
         <main className="min-h-0 flex-1">
           <div
             className={`h-full ${
-              nav === 'Chat' || nav === 'Calendar' || nav === 'Tasks' || nav === 'Notes' ? 'hidden' : 'block'
+              nav === 'Chat' || nav === 'Calendar' || nav === 'Tasks' || nav === 'Notes' || nav === 'Documents'
+                ? 'hidden'
+                : 'block'
             }`}
           >
             <Dashboard onMic={() => setVoice(true)} />
@@ -51,6 +54,7 @@ export default function App() {
           {nav === 'Calendar' && <CalendarScreen />}
           {nav === 'Tasks' && <TasksScreen onNavigate={setNav} />}
           {nav === 'Notes' && <NotesScreen />}
+          {nav === 'Documents' && <DocumentsScreen />}
         </main>
       </div>
 
