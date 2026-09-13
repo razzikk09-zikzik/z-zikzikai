@@ -10,6 +10,7 @@ import NotesScreen from './components/NotesScreen'
 import DocumentsScreen from './components/DocumentsScreen'
 import ContactsScreen from './components/ContactsScreen'
 import ToolsScreen from './components/ToolsScreen'
+import FitnessScreen from './components/FitnessScreen'
 import VoiceMode from './components/VoiceMode'
 import { navItems } from './data'
 import { navIcons } from './components/Sidebar'
@@ -32,7 +33,7 @@ export default function App() {
   }, [])
 
   const mobileNav = navItems.filter((n) =>
-    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes', 'Documents', 'Contacts', 'Tools'].includes(n.label),
+    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes', 'Documents', 'Contacts', 'Tools', 'Fitness'].includes(n.label),
   )
 
   return (
@@ -51,7 +52,8 @@ export default function App() {
               nav === 'Notes' ||
               nav === 'Documents' ||
               nav === 'Contacts' ||
-              nav === 'Tools'
+              nav === 'Tools' ||
+              nav === 'Fitness'
                 ? 'hidden'
                 : 'block'
             }`}
@@ -65,6 +67,7 @@ export default function App() {
           {nav === 'Documents' && <DocumentsScreen />}
           {nav === 'Contacts' && <ContactsScreen onNavigate={setNav} />}
           {nav === 'Tools' && <ToolsScreen />}
+          {nav === 'Fitness' && <FitnessScreen />}
         </main>
       </div>
 

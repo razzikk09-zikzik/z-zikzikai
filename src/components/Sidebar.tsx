@@ -13,6 +13,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronRight,
+  Heart,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { navItems } from '../data'
@@ -27,6 +28,7 @@ export const navIcons: Record<string, React.ElementType> = {
   emails: Mail,
   contacts: User,
   tools: LayoutGrid,
+  fitness: Heart,
   settings: Settings,
 }
 

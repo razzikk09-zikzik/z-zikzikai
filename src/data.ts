@@ -8,6 +8,7 @@ export const navItems = [
   { label: 'Emails', icon: 'emails' },
   { label: 'Contacts', icon: 'contacts' },
   { label: 'Tools', icon: 'tools' },
+  { label: 'Fitness', icon: 'fitness' },
   { label: 'Settings', icon: 'settings' },
 ]
 
