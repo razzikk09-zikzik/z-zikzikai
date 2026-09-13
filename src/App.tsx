@@ -9,6 +9,7 @@ import TasksScreen from './components/TasksScreen'
 import NotesScreen from './components/NotesScreen'
 import DocumentsScreen from './components/DocumentsScreen'
 import ContactsScreen from './components/ContactsScreen'
+import ToolsScreen from './components/ToolsScreen'
 import VoiceMode from './components/VoiceMode'
 import { navItems } from './data'
 import { navIcons } from './components/Sidebar'
@@ -31,7 +32,7 @@ export default function App() {
   }, [])
 
   const mobileNav = navItems.filter((n) =>
-    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes', 'Documents', 'Contacts'].includes(n.label),
+    ['Home', 'Chat', 'Tasks', 'Calendar', 'Notes', 'Documents', 'Contacts', 'Tools'].includes(n.label),
   )
 
   return (
@@ -49,7 +50,8 @@ export default function App() {
               nav === 'Tasks' ||
               nav === 'Notes' ||
               nav === 'Documents' ||
-              nav === 'Contacts'
+              nav === 'Contacts' ||
+              nav === 'Tools'
                 ? 'hidden'
                 : 'block'
             }`}
@@ -62,6 +64,7 @@ export default function App() {
           {nav === 'Notes' && <NotesScreen />}
           {nav === 'Documents' && <DocumentsScreen />}
           {nav === 'Contacts' && <ContactsScreen onNavigate={setNav} />}
+          {nav === 'Tools' && <ToolsScreen />}
         </main>
       </div>
 
@@ -74,12 +77,12 @@ export default function App() {
             <button
               key={item.label}
               onClick={() => setNav(item.label)}
-              className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors ${
+              className={`flex flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden px-0.5 text-[8.5px] font-semibold transition-colors ${
                 isActive ? 'text-[#5B4DFF]' : 'text-[#9CA3AF]'
               }`}
             >
-              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.9} />
-              {item.label}
+              <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={isActive ? 2.2 : 1.9} />
+              <span className="w-full truncate text-center">{item.label}</span>
             </button>
           )
         })}
