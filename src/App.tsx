@@ -67,7 +67,7 @@ export default function App() {
           {nav === 'Documents' && <DocumentsScreen />}
           {nav === 'Contacts' && <ContactsScreen onNavigate={setNav} />}
           {nav === 'Tools' && <ToolsScreen />}
-          {nav === 'Fitness' && <FitnessScreen />}
+          {nav === 'Fitness' && <FitnessScreen onNavigate={setNav} />}
         </main>
       </div>
 

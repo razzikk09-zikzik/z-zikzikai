@@ -14,10 +14,14 @@ import {
   MoreVertical,
   X,
   Check,
+  Clock,
+  Layers,
   ScanLine,
+  Star,
   Dumbbell,
   PieChart,
   Sparkle,
+  Trophy,
   LayoutGrid,
   UtensilsCrossed,
   TrendingUp,
@@ -39,13 +43,38 @@ type Goals = {
 
 type FoodEntry = { id: number; time: string; name: string; emoji: string; serving: string; kcal: number; p: number; c: number; f: number }
 type WeightPoint = { date: string; kg: number }
-type Workout = { id: number; date: string; type: string; mins: number }
+type Workout = {
+  id: number
+  date: string
+  name: string
+  groups: string
+  mins: number
+  kcal: number
+  volume: number
+  notes?: string
+}
+
+type PlannedWorkout = { id: number; date: string; name: string; groups: string; mins: number }
+
+type WorkoutPlan = {
+  name: string
+  groups: string
+  mins: number
+  exercises: { name: string; sets: string; done: boolean }[]
+}
+
+type Aggregate = { workouts: number; mins: number; kcal: number; volume: number; bestKcal: number; bestDate: string }
 
 type FitnessData = {
   goals: Goals
   weightLog: WeightPoint[]
   foodLog: Record<string, FoodEntry[]>
   workouts: Workout[]
+  planned: PlannedWorkout[]
+  plan: WorkoutPlan
+  aggregates: { month: Aggregate; lastMonth: Aggregate; allTime: Aggregate }
+  muscleFocus: { label: string; pct: number; color: string }[]
+  weekStreak: number
 }
 
 /* -------------------------------- helpers --------------------------------- */
@@ -80,6 +109,14 @@ function fmtDateShort(dateIso: string) {
 function bmiOf(kg: number, cm: number) {
   if (!kg || !cm) return 0
   return kg / (cm / 100) ** 2
+}
+function fmtDur(mins: number) {
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`
+}
+function hashStr(s: string) {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0
+  return Math.abs(h)
 }
 function bmiLabel(v: number) {
   if (v < 18.5) return { label: 'Underweight', bg: '#FFF3E0', fg: '#D97706' }
@@ -143,14 +180,49 @@ function seedData(): FitnessData {
     { id: idSeq++, time: '10:00 PM', name: 'Greek Yogurt', emoji: '🥛', serving: '150 g', kcal: 154, p: 15, c: 8, f: 5 },
   ]
 
+  const d = (back: number) => iso(new Date(TODAY0.getTime() - back * DAY))
   const workouts: Workout[] = [
-    { id: idSeq++, date: iso(new Date(TODAY0.getTime() - 4 * DAY)), type: 'Strength Training', mins: 45 },
-    { id: idSeq++, date: iso(new Date(TODAY0.getTime() - 3 * DAY)), type: 'Running', mins: 30 },
-    { id: idSeq++, date: iso(new Date(TODAY0.getTime() - 2 * DAY)), type: 'Cycling', mins: 40 },
-    { id: idSeq++, date: iso(new Date(TODAY0.getTime() - 1 * DAY)), type: 'Strength Training', mins: 50 },
+    { id: idSeq++, date: d(1), name: 'Push Day', groups: 'Chest • Shoulders • Triceps', mins: 58, kcal: 420, volume: 12450, notes: 'Felt strong' },
+    { id: idSeq++, date: d(3), name: 'Leg Day', groups: 'Quads • Hamstrings', mins: 62, kcal: 510, volume: 14200, notes: 'Good session' },
+    { id: idSeq++, date: d(5), name: 'Pull Day', groups: 'Back • Biceps', mins: 55, kcal: 380, volume: 11800, notes: 'Back pump' },
+    { id: idSeq++, date: d(8), name: 'Upper Body', groups: 'Compound', mins: 50, kcal: 340, volume: 10900 },
+    { id: idSeq++, date: d(10), name: 'Leg Day', groups: 'Quads • Hamstrings', mins: 65, kcal: 520, volume: 15300, notes: 'PR on squats' },
+    { id: idSeq++, date: d(12), name: 'Full Body', groups: 'Compound', mins: 48, kcal: 310, volume: 9800, notes: 'Light session' },
+    { id: idSeq++, date: d(4), name: 'Full Body', groups: 'Compound', mins: 40, kcal: 290, volume: 8900, notes: 'Quick session' },
+  ]
+  const planned: PlannedWorkout[] = [
+    { id: idSeq++, date: d(0), name: 'Pull Day', groups: 'Back • Biceps', mins: 60 },
+    { id: idSeq++, date: d(2), name: 'Leg Day', groups: 'Quads • Hamstrings', mins: 60 },
+    { id: idSeq++, date: d(4), name: 'Push Day', groups: 'Chest • Shoulders', mins: 60 },
+    { id: idSeq++, date: d(6), name: 'Active Rest', groups: 'Light Cardio • Mobility', mins: 30 },
+  ]
+  const plan: WorkoutPlan = {
+    name: 'Push Day',
+    groups: 'Chest • Shoulders • Triceps',
+    mins: 60,
+    exercises: [
+      { name: 'Bench Press', sets: '3 × 8-10', done: false },
+      { name: 'Incline Dumbbell Press', sets: '3 × 8-10', done: false },
+      { name: 'Shoulder Press', sets: '3 × 8-10', done: false },
+      { name: 'Lateral Raises', sets: '3 × 12-15', done: false },
+      { name: 'Triceps Pushdown', sets: '3 × 12-15', done: false },
+    ],
+  }
+  const aggregates = {
+    month: { workouts: 16, mins: 860, kcal: 6850, volume: 184200, bestKcal: 720, bestDate: 'Sep 7' },
+    lastMonth: { workouts: 14, mins: 765, kcal: 5940, volume: 161000, bestKcal: 690, bestDate: 'Aug 12' },
+    allTime: { workouts: 142, mins: 7685, kcal: 61300, volume: 1654000, bestKcal: 780, bestDate: 'Jun 21' },
+  }
+  const muscleFocus = [
+    { label: 'Chest', pct: 27, color: '#2F6DF6' },
+    { label: 'Back', pct: 21, color: '#14B8A6' },
+    { label: 'Legs', pct: 21, color: '#10B981' },
+    { label: 'Shoulders', pct: 14, color: '#F59E0B' },
+    { label: 'Arms', pct: 11, color: '#EC4899' },
+    { label: 'Core', pct: 6, color: '#7C5BFF' },
   ]
 
-  return { goals, weightLog, foodLog, workouts }
+  return { goals, weightLog, foodLog, workouts, planned, plan, aggregates, muscleFocus, weekStreak: 12 }
 }
 
 const TODAY0 = new Date()
@@ -165,7 +237,22 @@ function loadFitness(): FitnessData {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (parsed && parsed.goals && parsed.weightLog) return parsed
+      if (parsed && parsed.goals && parsed.weightLog) {
+        // migration: old shape had simple {date,type,mins} workouts
+        if (!parsed.workouts?.[0]?.name) {
+          const fresh = seedData()
+          return {
+            ...parsed,
+            workouts: fresh.workouts,
+            planned: fresh.planned,
+            plan: fresh.plan,
+            aggregates: fresh.aggregates,
+            muscleFocus: fresh.muscleFocus,
+            weekStreak: fresh.weekStreak,
+          }
+        }
+        return parsed
+      }
     }
   } catch {
     /* corrupted → reseed */
@@ -396,7 +483,191 @@ function WeeklyBars({ totals, goal }: { totals: { label: string; value: number; 
   )
 }
 
+/* --------------------------- workout chart bits --------------------------- */
+
+type WPoint = { key: string; dur: number; kcal: number }
+
+function hashBased(key: string) {
+  const h = hashStr(key)
+  const dur = 38 + (h % 33)
+  return { dur, kcal: Math.round(dur * 6.9 + (h % 45)) }
+}
+
+function buildWorkoutSeries(range: '7D' | '1M' | '3M' | '6M' | '1Y', sessions: Workout[]) {
+  const byDate = new Map(sessions.map((s) => [s.date, s]))
+  const pts: WPoint[] = []
+  const ticks: { i: number; label: string }[] = []
+  const add = (d: Date, label?: string) => {
+    const key = iso(d)
+    const s = byDate.get(key)
+    const v = s ? { dur: s.mins, kcal: s.kcal } : hashBased(key)
+    if (label) ticks.push({ i: pts.length, label })
+    pts.push({ key, ...v })
+  }
+  const today = new Date(TODAY0)
+
+  if (range === '7D') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * DAY)
+      add(d, d.toLocaleDateString('en-US', { weekday: 'short' }))
+    }
+  } else if (range === '1M') {
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date(today.getTime() - i * DAY)
+      add(d, i % 7 === 6 || i === 0 ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined)
+    }
+  } else if (range === '3M' || range === '6M') {
+    const weeks = range === '3M' ? 13 : 26
+    const start = new Date(today.getTime() - (weeks * 7 - 1) * DAY)
+    for (let i = 0; i < weeks; i++) {
+      const ws = new Date(start.getTime() + i * 7 * DAY)
+      let dur = 0
+      let kcal = 0
+      let count = 0
+      for (let k = 0; k < 7; k++) {
+        const s = byDate.get(iso(new Date(ws.getTime() + k * DAY)))
+        if (s) {
+          dur += s.mins
+          kcal += s.kcal
+          count++
+        }
+      }
+      if (!count) {
+        const sy = hashBased(iso(ws))
+        dur = sy.dur
+        kcal = sy.kcal
+      }
+      if (i % 4 === 0 || i === weeks - 1)
+        ticks.push({ i: pts.length, label: ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) })
+      pts.push({ key: iso(ws), dur, kcal })
+    }
+  } else {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+      const sy = hashBased(iso(d))
+      if (i % 2 === 0) ticks.push({ i: pts.length, label: d.toLocaleDateString('en-US', { month: 'short' }) })
+      pts.push({ key: iso(d), dur: Math.round(sy.dur * 4.3), kcal: Math.round(sy.kcal * 4.3) })
+    }
+  }
+  return { pts, ticks }
+}
+
+function ComboChart({ pts, ticks, y1Max, y2Max }: { pts: WPoint[]; ticks: { i: number; label: string }[]; y1Max: number; y2Max: number }) {
+  const W = 620
+  const H = 250
+  const padL = 38
+  const padR = 44
+  const padT = 12
+  const padB = 26
+  const step = (W - padL - padR) / Math.max(pts.length, 1)
+  const x = (i: number) => padL + step * i + step / 2
+  const y1 = (v: number) => padT + (1 - v / y1Max) * (H - padT - padB)
+  const y2 = (v: number) => padT + (1 - v / y2Max) * (H - padT - padB)
+  const bw = Math.min(step * 0.55, 24)
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y2(p.kcal).toFixed(1)}`).join(' ')
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      {[0, 1, 2, 3, 4].map((k) => (
+        <g key={k}>
+          <line x1={padL} x2={W - padR} y1={y1((y1Max / 4) * k)} y2={y1((y1Max / 4) * k)} stroke="#F0EEF9" strokeWidth="1" />
+          <text x={padL - 7} y={y1((y1Max / 4) * k) + 3.5} textAnchor="end" fontSize="9.5" fill="#9CA3AF" fontWeight="600">
+            {Math.round((y1Max / 4) * k)}
+          </text>
+          <text x={W - padR + 7} y={y2((y2Max / 4) * k) + 3.5} fontSize="9.5" fill="#9CA3AF" fontWeight="600">
+            {Math.round((y2Max / 4) * k)}
+          </text>
+        </g>
+      ))}
+      {pts.map((p, i) => (
+        <rect
+          key={p.key + i}
+          x={x(i) - bw / 2}
+          y={y1(p.dur)}
+          width={bw}
+          height={Math.max(H - padB - y1(p.dur), 2)}
+          rx="3.5"
+          fill="#A78BFA"
+          opacity="0.85"
+        />
+      ))}
+      <path d={line} fill="none" stroke="#6D4AFF" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map((p, i) => (
+        <circle key={'c' + i} cx={x(i)} cy={y2(p.kcal)} r="3" fill="#fff" stroke="#6D4AFF" strokeWidth="1.8" />
+      ))}
+      {ticks.map((t) => (
+        <text key={t.i + t.label} x={x(t.i)} y={H - 8} textAnchor="middle" fontSize="10" fill="#9CA3AF" fontWeight="600">
+          {t.label}
+        </text>
+      ))}
+    </svg>
+  )
+}
+
+function MuscleDonut({ segs, total }: { segs: { label: string; pct: number; color: string }[]; total: number }) {
+  const size = 150
+  const r = (size - 20) / 2
+  const C = 2 * Math.PI * r
+  let acc = 0
+  return (
+    <div className="relative mx-auto" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F0EEF9" strokeWidth="17" />
+        {segs.map((s) => {
+          const len = (s.pct / 100) * C
+          const el = (
+            <circle
+              key={s.label}
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="17"
+              strokeDasharray={`${Math.max(len - 2, 1)} ${C - Math.max(len - 2, 1)}`}
+              strokeDashoffset={-acc}
+            />
+          )
+          acc += len
+          return el
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[24px] font-extrabold leading-none text-[#111827]">{total}</span>
+        <span className="mt-1 text-center text-[10px] font-medium leading-tight text-[#9CA3AF]">
+          Total Sets
+          <br />
+          This Week
+        </span>
+      </div>
+    </div>
+  )
+}
+
 /* ================================ the page ================================ */
+
+const WORKOUT_TINTS: Record<string, { bg: string; fg: string }> = {
+  push: { bg: '#EFECFE', fg: '#6D4AFF' },
+  pull: { bg: '#E4F6EC', fg: '#10B981' },
+  legs: { bg: '#FFF3E0', fg: '#D97706' },
+  upper: { bg: '#E0E7FF', fg: '#4F46E5' },
+  lower: { bg: '#E7F0FF', fg: '#2F6DF6' },
+  core: { bg: '#E4F6EC', fg: '#10B981' },
+  rest: { bg: '#E4F6EC', fg: '#10B981' },
+  generic: { bg: '#EEEDFC', fg: '#5B4DFF' },
+}
+
+function workoutTint(name: string) {
+  const n = name.toLowerCase()
+  if (n.includes('push')) return WORKOUT_TINTS.push
+  if (n.includes('pull')) return WORKOUT_TINTS.pull
+  if (n.includes('leg')) return WORKOUT_TINTS.legs
+  if (n.includes('upper')) return WORKOUT_TINTS.upper
+  if (n.includes('lower')) return WORKOUT_TINTS.lower
+  if (n.includes('core')) return WORKOUT_TINTS.core
+  if (n.includes('rest')) return WORKOUT_TINTS.rest
+  return WORKOUT_TINTS.generic
+}
 
 const QUICK_ADDS = [
   { name: 'Apple', emoji: '🍎', serving: '1 medium', kcal: 95, p: 0, c: 25, f: 0 },
@@ -408,9 +679,7 @@ const QUICK_ADDS = [
   { name: 'Bread', emoji: '🍞', serving: '1 slice', kcal: 80, p: 3, c: 15, f: 1 },
 ]
 
-const WORKOUT_TYPES = ['Strength Training', 'Running', 'Cycling', 'Yoga', 'Swimming', 'Sports']
-
-export default function FitnessScreen() {
+export default function FitnessScreen({ onNavigate }: { onNavigate?: (nav: string) => void }) {
   const initial = useRef(loadFitness())
   const [data, setData] = useState<FitnessData>(initial.current)
   const [tab, setTab] = useState<'overview' | 'nutrition' | 'foodlog' | 'weight' | 'workouts' | 'goals'>('overview')
@@ -423,8 +692,10 @@ export default function FitnessScreen() {
   const [weightInput, setWeightInput] = useState('')
   const [goalDraft, setGoalDraft] = useState<Goals>(initial.current.goals)
   const [calorieEdit, setCalorieEdit] = useState('')
-  const [workout, setWorkout] = useState({ type: WORKOUT_TYPES[0], mins: '45' })
   const [range, setRange] = useState<'3m' | '6m'>('3m')
+  const [woRange, setWoRange] = useState<'7D' | '1M' | '3M' | '6M' | '1Y'>('1M')
+  const [statRange, setStatRange] = useState<'month' | 'lastMonth' | 'allTime'>('month')
+  const [statOpen, setStatOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<number | undefined>(undefined)
 
@@ -491,8 +762,24 @@ export default function FitnessScreen() {
     return s
   }, [data.foodLog])
 
-  const weekWorkouts = data.workouts.filter((w) => w.date >= iso(startOfWeek(dateObj))).length
+  const weekWorkouts = data.workouts.filter((w) => w.date >= iso(new Date(Date.now() - 6 * DAY))).length
   const workoutPct = Math.min(100, Math.round((weekWorkouts / Math.max(goals.weeklyWorkouts, 1)) * 100))
+
+  const inLast7 = data.workouts.filter((w) => w.date >= iso(new Date(Date.now() - 6 * DAY)))
+  const inPrev7 = data.workouts.filter((w) => {
+    const t = new Date(w.date + 'T00:00:00').getTime()
+    return t >= Date.now() - 13 * DAY && t < Date.now() - 6 * DAY
+  })
+  const sumOf = (arr: Workout[], k: 'mins' | 'kcal') => arr.reduce((s, w) => s + w[k], 0)
+  const wkMins = sumOf(inLast7, 'mins')
+  const prevMins = sumOf(inPrev7, 'mins')
+  const wkKcal = sumOf(inLast7, 'kcal')
+  const prevKcal = sumOf(inPrev7, 'kcal')
+  const pctDelta = (cur: number, prev: number) => (prev ? Math.round(((cur - prev) / prev) * 100) : 100)
+
+  const woSeries = useMemo(() => buildWorkoutSeries(woRange, data.workouts), [woRange, data.workouts])
+  const woMax1 = Math.max(120, Math.ceil(Math.max(...woSeries.pts.map((p) => p.dur)) / 30) * 30)
+  const woMax2 = Math.max(800, Math.ceil(Math.max(...woSeries.pts.map((p) => p.kcal)) / 200) * 200)
 
   /* ------------------------------- actions ------------------------------- */
 
@@ -566,18 +853,22 @@ export default function FitnessScreen() {
     showToast('Goals saved')
   }
 
-  function addWorkout() {
-    const mins = Number(workout.mins) || 0
-    if (!mins) return
+  function toggleExercise(idx: number) {
     setData((prev) => ({
       ...prev,
-      workouts: [...prev.workouts, { id: idSeq++, date: dateIso, type: workout.type, mins }],
+      plan: { ...prev.plan, exercises: prev.plan.exercises.map((ex, i) => (i === idx ? { ...ex, done: !ex.done } : ex)) },
     }))
-    showToast(`${workout.type} logged`)
+  }
+
+  function addQuickSession(name: string, groups: string, mins: number) {
+    const s: Workout = { id: idSeq++, date: TODAY_ISO0, name, groups, mins, kcal: Math.round(mins * 7.2), volume: mins * 210, notes: 'Quick start' }
+    setData((prev) => ({ ...prev, workouts: [s, ...prev.workouts] }))
+    showToast(`${name} logged — ${mins} min`)
   }
 
   function deleteWorkout(id: number) {
     setData((prev) => ({ ...prev, workouts: prev.workouts.filter((w) => w.id !== id) }))
+    setRowMenu(null)
     showToast('Workout removed')
   }
 
@@ -989,78 +1280,244 @@ export default function FitnessScreen() {
           )}
 
           {tab === 'workouts' && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-[16px] border border-[#ECECF4] bg-white p-5">
-                <h2 className="mb-3 text-[16px] font-bold tracking-tight text-[#111827]">This Week</h2>
-                <div className="flex items-center justify-between rounded-[12px] bg-[#FBFAFE] px-4 py-3">
-                  <span className="flex items-center gap-2 text-[13.5px] font-semibold text-[#111827]">
-                    <Dumbbell className="h-4 w-4 text-[#5B4DFF]" strokeWidth={2} />
-                    Weekly sessions
-                  </span>
-                  <span className="text-[13.5px] font-bold text-[#111827]">
-                    {weekWorkouts} / {goals.weeklyWorkouts}
-                  </span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#EFEDF8]">
-                  <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-[#7C5BFF] to-[#4F7CFF]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${workoutPct}%` }}
-                    transition={{ duration: 0.7 }}
-                  />
-                </div>
-                <div className="mt-4 flex flex-col gap-2">
-                  {data.workouts.length === 0 && <p className="py-4 text-center text-[12.5px] text-[#9CA3AF]">No workouts logged yet.</p>}
-                  {[...data.workouts].reverse().map((w) => (
-                    <div key={w.id} className="group flex items-center gap-3 rounded-[12px] border border-[#ECECF4] bg-white px-3.5 py-2.5">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#EEEDFC]">
-                        <Dumbbell className="h-4 w-4 text-[#5B4DFF]" strokeWidth={2} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[13px] font-semibold text-[#111827]">{w.type}</div>
-                        <div className="text-[11px] text-[#9CA3AF]">{fmtDateShort(w.date)}</div>
-                      </div>
-                      <span className="text-[12px] font-semibold text-[#6B7280]">{w.mins} min</span>
-                      <button
-                        onClick={() => deleteWorkout(w.id)}
-                        className="text-[#C4C4D4] opacity-0 transition-colors hover:text-[#DC2626] group-hover:opacity-100"
-                        aria-label="Delete workout"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+            <div className="flex flex-col gap-4">
+              {/* weekly stat cards */}
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {[
+                  {
+                    top: `${weekWorkouts} / ${goals.weeklyWorkouts}`,
+                    label: 'Workouts This Week',
+                    delta: `↑ ${Math.max(weekWorkouts - inPrev7.length, 0)} vs last week`,
+                    icon: Dumbbell,
+                    bg: '#EEEDFC',
+                    fg: '#5B4DFF',
+                  },
+                  {
+                    top: fmtDur(wkMins),
+                    label: 'Total Workout Time',
+                    delta: `↑ ${pctDelta(wkMins, prevMins)}% vs last week`,
+                    icon: Clock,
+                    bg: '#E4F6EC',
+                    fg: '#10B981',
+                  },
+                  {
+                    top: wkKcal.toLocaleString(),
+                    label: 'Calories Burned',
+                    delta: `↑ ${pctDelta(wkKcal, prevKcal)}% vs last week`,
+                    icon: Flame,
+                    bg: '#FDE8EC',
+                    fg: '#E11D48',
+                  },
+                  {
+                    top: `${data.weekStreak}`,
+                    label: 'Week Streak',
+                    delta: null,
+                    icon: Layers,
+                    bg: '#EEEDFC',
+                    fg: '#5B4DFF',
+                  },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-center gap-3.5 rounded-[14px] border border-[#ECECF4] bg-white p-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px]" style={{ background: s.bg }}>
+                      <s.icon className="h-5 w-5" style={{ color: s.fg }} strokeWidth={2} />
+                    </span>
+                    <div>
+                      <div className="text-[19px] font-bold leading-tight text-[#111827]">{s.top}</div>
+                      <div className="text-[11.5px] font-medium text-[#9CA3AF]">{s.label}</div>
+                      {s.delta ? (
+                        <div className="mt-0.5 text-[11px] font-semibold text-[#10B981]">{s.delta}</div>
+                      ) : (
+                        <span className="mt-0.5 inline-flex rounded-full bg-[#E4F6EC] px-2 py-0.5 text-[10px] font-semibold text-[#10B981]">Keep it going!</span>
+                      )}
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                {/* Workout Overview */}
+                <div className="rounded-[16px] border border-[#ECECF4] bg-white p-5">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-[16px] font-bold tracking-tight text-[#111827]">Workout Overview</h2>
+                    <div className="flex gap-1">
+                      {(['7D', '1M', '3M', '6M', '1Y'] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setWoRange(r)}
+                          className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                            woRange === r ? 'bg-[#16182B] text-white' : 'bg-[#F3F2F9] text-[#6B7280] hover:bg-[#ECEAF7]'
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <ComboChart pts={woSeries.pts} ticks={woSeries.ticks} y1Max={woMax1} y2Max={woMax2} />
+                  <div className="mt-1 flex items-center justify-center gap-5 text-[11px] font-medium text-[#6B7280]">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-4 rounded-full bg-[#A78BFA]" /> Workout Duration (min)
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-0 w-4 border-t-2 border-[#6D4AFF]" /> Calories Burned
+                    </span>
+                  </div>
+                </div>
+
+                {/* Muscle Group Focus */}
+                <div className="rounded-[16px] border border-[#ECECF4] bg-white p-5">
+                  <h2 className="mb-3 text-[16px] font-bold tracking-tight text-[#111827]">Muscle Group Focus</h2>
+                  <MuscleDonut segs={data.muscleFocus} total={14} />
+                  <div className="mt-4 flex flex-col gap-2">
+                    {data.muscleFocus.map((m) => (
+                      <div key={m.label} className="flex items-center gap-2.5 text-[12.5px]">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: m.color }} />
+                        <span className="flex-1 font-semibold text-[#1F2937]">{m.label}</span>
+                        <span className="font-bold text-[#111827]">{m.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="rounded-[16px] border border-[#ECECF4] bg-white p-5">
-                <h2 className="mb-3 text-[16px] font-bold tracking-tight text-[#111827]">Log Workout</h2>
-                <label className="mb-1 block text-[12px] font-semibold text-[#374151]">Type</label>
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                  {WORKOUT_TYPES.map((t) => (
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                {/* Recent Workouts */}
+                <div className="rounded-[16px] border border-[#ECECF4] bg-white p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-[16px] font-bold tracking-tight text-[#111827]">Recent Workouts</h2>
                     <button
-                      key={t}
-                      onClick={() => setWorkout((w) => ({ ...w, type: t }))}
-                      className={`rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                        workout.type === t ? 'border-transparent bg-[#16182B] text-white' : 'border-[#E7E5F2] text-[#4B5563] hover:bg-[#F6F5FB]'
-                      }`}
+                      onClick={() => showToast("You're all caught up")}
+                      className="flex items-center gap-1 text-[12px] font-semibold text-[#5B4DFF] transition-colors hover:text-[#4437e0]"
                     >
-                      {t}
+                      View All <ArrowRight className="h-3 w-3" strokeWidth={2.2} />
                     </button>
-                  ))}
+                  </div>
+                  <div className="hidden grid-cols-[100px_minmax(0,1fr)_80px_80px_110px_minmax(0,1fr)_32px] items-center border-b border-[#F0EFF7] px-2 pb-2 sm:grid">
+                    {['Date', 'Workout Name', 'Duration', 'Calories', 'Volume', 'Notes'].map((h) => (
+                      <span key={h} className="text-[11.5px] font-semibold text-[#9CA3AF]">
+                        {h}
+                      </span>
+                    ))}
+                    <span />
+                  </div>
+                  {[...data.workouts]
+                    .sort((a, b) => (a.date < b.date ? 1 : -1))
+                    .map((w) => {
+                      const tint = workoutTint(w.name)
+                      return (
+                        <div
+                          key={w.id}
+                          className="group grid grid-cols-1 gap-1.5 border-b border-[#F0EFF7] px-2 py-2.5 last:border-b-0 hover:bg-[#FAF9FF] sm:grid-cols-[100px_minmax(0,1fr)_80px_80px_110px_minmax(0,1fr)_32px] sm:items-center sm:gap-0"
+                        >
+                          <span className="text-[12px] font-medium text-[#6B7280]">{fmtDateShort(w.date)}</span>
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <span
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]"
+                              style={{ background: tint.bg }}
+                            >
+                              <Dumbbell className="h-4 w-4" style={{ color: tint.fg }} strokeWidth={2} />
+                            </span>
+                            <span className="truncate text-[13px] font-semibold text-[#111827]">{w.name}</span>
+                          </span>
+                          <span className="text-[12px] text-[#6B7280]">{w.mins} min</span>
+                          <span className="text-[12px] text-[#6B7280]">{w.kcal} kcal</span>
+                          <span className="text-[12px] text-[#6B7280]">{w.volume.toLocaleString()} kg</span>
+                          <span className="truncate text-[12px] italic text-[#9CA3AF]">{w.notes || '-'}</span>
+                          <span className="flex justify-end">
+                            <span className="relative">
+                              <button
+                                onClick={() => setRowMenu(rowMenu === w.id ? null : w.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg text-[#9CA3AF] transition-colors hover:bg-[#F3F2F9] hover:text-[#111827] sm:opacity-0 sm:group-hover:opacity-100"
+                                aria-label="Workout options"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                              <AnimatePresence>
+                                {rowMenu === w.id && (
+                                  <>
+                                    <div className="fixed inset-0 z-30" onClick={() => setRowMenu(null)} />
+                                    <motion.div
+                                      initial={{ opacity: 0, y: -4 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={{ opacity: 0, y: -4 }}
+                                      transition={{ duration: 0.13 }}
+                                      className="absolute right-0 top-full z-40 mt-1 w-32 rounded-[10px] border border-[#ECECF4] bg-white p-1 shadow-[0_10px_30px_rgba(40,35,90,0.14)]"
+                                    >
+                                      <button
+                                        onClick={() => deleteWorkout(w.id)}
+                                        className="flex w-full items-center gap-2 rounded-[7px] px-2.5 py-1.5 text-left text-[12.5px] font-medium text-[#DC2626] hover:bg-[#FEF2F2]"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                                      </button>
+                                    </motion.div>
+                                  </>
+                                )}
+                              </AnimatePresence>
+                            </span>
+                          </span>
+                        </div>
+                      )
+                    })}
                 </div>
-                <label className="mb-1 block text-[12px] font-semibold text-[#374151]">Duration (minutes)</label>
-                <input
-                  type="number"
-                  value={workout.mins}
-                  onChange={(e) => setWorkout((w) => ({ ...w, mins: e.target.value }))}
-                  className="mb-3 h-10 w-full rounded-[10px] border border-[#E7E5F2] bg-white px-3 text-[13px] text-[#111827] outline-none focus:border-[#B9A7FF]"
-                />
-                <button
-                  onClick={addWorkout}
-                  className="w-full rounded-[10px] bg-gradient-to-r from-[#7C5BFF] to-[#4F7CFF] py-2.5 text-[13px] font-semibold text-white shadow-[0_4px_12px_rgba(106,79,255,0.3)] transition-transform hover:scale-[1.02]"
-                >
-                  Log for {fmtDateShort(dateIso)}
-                </button>
+
+                {/* Upcoming Workouts */}
+                <div className="rounded-[16px] border border-[#ECECF4] bg-white p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-[16px] font-bold tracking-tight text-[#111827]">Upcoming Workouts</h2>
+                    <button
+                      onClick={() => onNavigate?.('Calendar')}
+                      className="flex items-center gap-1 text-[12px] font-semibold text-[#5B4DFF] transition-colors hover:text-[#4437e0]"
+                    >
+                      View Calendar <ArrowRight className="h-3 w-3" strokeWidth={2.2} />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2.5">
+                    {data.planned.map((p) => {
+                      const tint = workoutTint(p.name)
+                      const d = new Date(p.date + 'T00:00:00')
+                      return (
+                        <div key={p.id} className="flex items-center gap-3">
+                          <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-[10px] border border-[#ECECF4] bg-white leading-none">
+                            <span className="text-[8.5px] font-bold uppercase text-[#9CA3AF]">
+                              {d.toLocaleDateString('en-US', { month: 'short' })}
+                            </span>
+                            <span className="mt-0.5 text-[14px] font-extrabold text-[#111827]">{d.getDate()}</span>
+                          </span>
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
+                            style={{ background: tint.bg }}
+                          >
+                            <Dumbbell className="h-[18px] w-[18px]" style={{ color: tint.fg }} strokeWidth={2} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[13px] font-bold text-[#111827]">{p.name}</div>
+                            <div className="truncate text-[11px] text-[#9CA3AF]">{p.groups}</div>
+                          </div>
+                          <span className="flex shrink-0 items-center gap-1 text-[11.5px] font-semibold text-[#6B7280]">
+                            <Clock className="h-3.5 w-3.5 text-[#9CA3AF]" strokeWidth={2} />~ {p.mins} mins
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* banner */}
+              <div className="relative overflow-hidden rounded-[16px] bg-gradient-to-r from-[#EFECFE] via-[#E9E5FD] to-[#D9D2FB] p-5">
+                <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/30 blur-2xl" />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3.5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-white/70">
+                      <Trophy className="h-5 w-5 text-[#5B4DFF]" strokeWidth={2} />
+                    </span>
+                    <div>
+                      <div className="text-[14.5px] font-bold text-[#111827]">Consistency builds progress.</div>
+                      <div className="text-[12px] text-[#6B7280]">Show up, put in the work, and the results will follow.</div>
+                    </div>
+                  </div>
+                  <p className="text-[12.5px] font-medium italic text-[#4B4392]">"Discipline today, a stronger tomorrow."</p>
+                </div>
               </div>
             </div>
           )}
@@ -1105,6 +1562,168 @@ export default function FitnessScreen() {
 
       {/* ============================== right panel ============================== */}
       <aside className="hidden w-[300px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-[#ECECF4] bg-white p-4 xl:flex">
+        {tab === 'workouts' ? (
+          <>
+            {/* Today's Workout */}
+            <div className="rounded-[16px] border border-[#ECECF4] bg-white p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[16.5px] font-bold tracking-tight text-[#111827]">Today's Workout</h3>
+                <button
+                  onClick={() => showToast(`${data.plan.name} started — go get it!`)}
+                  className="flex items-center gap-1 rounded-[9px] bg-gradient-to-r from-[#7C5BFF] to-[#4F7CFF] px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-[0_3px_10px_rgba(106,79,255,0.3)] transition-transform hover:scale-[1.03]"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.4} /> Start Workout
+                </button>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#EEEDFC]">
+                    <Dumbbell className="h-4 w-4 text-[#5B4DFF]" strokeWidth={2} />
+                  </span>
+                  <div>
+                    <div className="text-[13.5px] font-bold text-[#111827]">{data.plan.name}</div>
+                    <div className="text-[11px] text-[#9CA3AF]">{data.plan.groups}</div>
+                  </div>
+                </div>
+                <span className="flex items-center gap-1 text-[11.5px] font-semibold text-[#6B7280]">
+                  <Clock className="h-3.5 w-3.5 text-[#9CA3AF]" strokeWidth={2} />~ {data.plan.mins} mins
+                </span>
+              </div>
+              <div className="mt-3 flex flex-col">
+                {data.plan.exercises.map((ex, i) => (
+                  <button
+                    key={ex.name}
+                    onClick={() => toggleExercise(i)}
+                    className="flex items-center gap-2.5 rounded-[9px] px-1.5 py-2 text-left transition-colors hover:bg-[#F6F5FB]"
+                  >
+                    <span
+                      className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border transition-colors ${
+                        ex.done ? 'border-transparent bg-gradient-to-br from-[#7C5BFF] to-[#4F7CFF]' : 'border-[#C9C6DC] bg-white'
+                      }`}
+                    >
+                      {ex.done && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.4} />}
+                    </span>
+                    <span className={`flex-1 text-[12.5px] font-medium ${ex.done ? 'text-[#9CA3AF] line-through' : 'text-[#111827]'}`}>
+                      {ex.name}
+                    </span>
+                    <span className="text-[11.5px] font-semibold text-[#6B7280]">{ex.sets}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Start */}
+            <div className="rounded-[16px] border border-[#ECECF4] bg-white p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[16.5px] font-bold tracking-tight text-[#111827]">Quick Start</h3>
+                <button
+                  onClick={() => showToast('Full workout library coming soon')}
+                  className="flex items-center gap-1 text-[12px] font-semibold text-[#5B4DFF] transition-colors hover:text-[#4437e0]"
+                >
+                  View All <ArrowRight className="h-3 w-3" strokeWidth={2.2} />
+                </button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {[
+                  { name: 'Push', groups: 'Chest • Shoulders', mins: 60 },
+                  { name: 'Pull', groups: 'Back • Biceps', mins: 60 },
+                  { name: 'Legs', groups: 'Quads • Hamstrings', mins: 65 },
+                  { name: 'Upper Body', groups: 'Compound', mins: 50 },
+                  { name: 'Lower Body', groups: 'Compound', mins: 55 },
+                  { name: 'Core', groups: 'Abs • Stability', mins: 30 },
+                ].map((q) => {
+                  const tint = workoutTint(q.name)
+                  return (
+                    <button
+                      key={q.name}
+                      onClick={() => addQuickSession(q.name, q.groups, q.mins)}
+                      className="flex flex-col items-center gap-1.5 rounded-[12px] border border-[#ECECF4] bg-[#FBFAFE] py-3 transition-all hover:-translate-y-[2px] hover:border-[#C9BCFF] hover:bg-[#F6F3FF]"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-[10px]" style={{ background: tint.bg }}>
+                        <Dumbbell className="h-4 w-4" style={{ color: tint.fg }} strokeWidth={2} />
+                      </span>
+                      <span className="text-[12px] font-bold text-[#111827]">{q.name}</span>
+                      <span className="px-1 text-center text-[9.5px] leading-tight text-[#9CA3AF]">{q.groups}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Workout Stats */}
+            <div className="rounded-[16px] border border-[#ECECF4] bg-white p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[16.5px] font-bold tracking-tight text-[#111827]">Workout Stats</h3>
+                <div className="relative">
+                  <button
+                    onClick={() => setStatOpen((o) => !o)}
+                    className="flex items-center gap-1 rounded-full bg-[#F3F2F9] px-2.5 py-1 text-[11px] font-semibold text-[#374151] transition-colors hover:bg-[#ECEAF7]"
+                  >
+                    {statRange === 'month' ? 'This Month' : statRange === 'lastMonth' ? 'Last Month' : 'All Time'}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  <AnimatePresence>
+                    {statOpen && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setStatOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.13 }}
+                          className="absolute right-0 top-full z-40 mt-1 w-36 rounded-[10px] border border-[#ECECF4] bg-white p-1 shadow-[0_10px_30px_rgba(40,35,90,0.14)]"
+                        >
+                          {(
+                            [
+                              { key: 'month', label: 'This Month' },
+                              { key: 'lastMonth', label: 'Last Month' },
+                              { key: 'allTime', label: 'All Time' },
+                            ] as const
+                          ).map((o) => (
+                            <button
+                              key={o.key}
+                              onClick={() => {
+                                setStatRange(o.key)
+                                setStatOpen(false)
+                              }}
+                              className="flex w-full items-center justify-between rounded-[7px] px-2.5 py-1.5 text-left text-[12.5px] font-medium text-[#1F2937] hover:bg-[#F6F5FB]"
+                            >
+                              {o.label}
+                              {statRange === o.key && <Check className="h-3.5 w-3.5 text-[#5B4DFF]" strokeWidth={2.4} />}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-col gap-2.5">
+                {(() => {
+                  const a = data.aggregates[statRange]
+                  return (
+                    [
+                      { icon: Dumbbell, bg: '#EEEDFC', fg: '#5B4DFF', label: 'Total Workouts', value: String(a.workouts) },
+                      { icon: Clock, bg: '#E4F6EC', fg: '#10B981', label: 'Total Duration', value: fmtDur(a.mins) },
+                      { icon: Flame, bg: '#FDE8EC', fg: '#E11D48', label: 'Total Calories', value: `${a.kcal.toLocaleString()} kcal` },
+                      { icon: CalendarDays, bg: '#E7F0FF', fg: '#2F6DF6', label: 'Total Volume', value: `${a.volume.toLocaleString()} kg` },
+                      { icon: Star, bg: '#FFF8E6', fg: '#F5B50A', label: 'Best Session', value: `${a.bestKcal} kcal (${a.bestDate})` },
+                    ].map((r) => (
+                      <div key={r.label} className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px]" style={{ background: r.bg }}>
+                          <r.icon className="h-4 w-4" style={{ color: r.fg }} strokeWidth={2} />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-[#374151]">{r.label}</span>
+                        <span className="whitespace-nowrap text-[12.5px] font-bold text-[#111827]">{r.value}</span>
+                      </div>
+                    ))
+                  )
+                })()}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
         {/* My Goals */}
         <div className="rounded-[16px] border border-[#ECECF4] bg-white p-4">
           <div className="flex items-center justify-between">
@@ -1233,6 +1852,8 @@ export default function FitnessScreen() {
             </p>
           </div>
         </div>
+          </>
+        )}
       </aside>
 
       {/* ================================ overlays =============================== */}
